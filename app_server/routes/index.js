@@ -9,7 +9,6 @@ router
     .route('/location/:locationid/review/new')
     .get(ctrlLocations.addReview)
     .post(ctrlLocations.doAddReview);
-//router.get('/location/review/new', ctrlLocations.addReview);
 
 router.get('/about', ctrlOthers.about);
 

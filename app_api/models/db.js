@@ -1,9 +1,10 @@
 const mongoose = require('mongoose');
-//const dbURI = 'mongodb://localhost/Loc8r';
 const readLine = require('readline');
+mongoose.set("strictQuery", false);
 
+// const dbURI = 'mongodb://localhost/Loc8r';
 const dbPassword = process.env.MONGODB_PASSWORD;
-const dbURI = `mongodb+srv://my_atlas_user:${dbPassword}@cluster0.s0fko.mongodb.net/Loc8r`;
+const dbURI = `mongodb+srv://myatlasdbuser:2715jins@cluster0.mfzdx.mongodb.net/`;
 
 const connect = () => {
   setTimeout(() => mongoose.connect(dbURI), 1000);
@@ -58,3 +59,4 @@ process.on('SIGTERM', () => {
 connect();
 
 require('./locations');
+
