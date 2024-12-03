@@ -1,5 +1,26 @@
 const mongoose = require('mongoose');
 const Loc = mongoose.model('Location');
+const User = mongoose.model('User');
+
+const getAuthor = async (req, res) => {
+    if (!req.auth || !req.auth.email) {
+        res.status(404).json({ "message": "User not found" });
+        return null;
+    }
+
+    try {
+        const user = await User.findOne({ email: req.auth.email }).exec();
+        if (!user) {
+            res.status(404).json({ "message": "User not found" });
+            return null;
+        }
+        return user.name; // 반환값으로 이름을 전달
+    } catch (err) {
+        console.error(err);
+        res.status(400).json(err);
+        return null;
+    }
+};
 
 const doSetAverageRating = async (location) => {
   if (location.reviews && location.reviews.length > 0) {
@@ -18,22 +39,26 @@ const doSetAverageRating = async (location) => {
   }
 };
 
-const doAddReview = async (req, res, location) => {
-  if (!location) {
-    return res.status(404).json({ "message": "Location not found" });
-  }
+const doAddReview = async (req, res, location, author) => {
+    if (!location) {
+        return res.status(404).json({ "message": "Location not found" });
+    }
 
-  const { author, rating, reviewText } = req.body;
-  location.reviews.push({ author, rating, reviewText });
+    const { rating, reviewText } = req.body;
+    location.reviews.push({
+        author,
+        rating,
+        reviewText,
+    });
 
-  try {
-    const updatedLocation = await location.save();
-    await updateAverageRating(updatedLocation._id);
-    const thisReview = updatedLocation.reviews.slice(-1).pop();
-    return res.status(201).json(thisReview);
-  } catch (err) {
-    return res.status(400).json(err);
-  }
+    try {
+        const updatedLocation = await location.save(); // 비동기 방식으로 저장
+        await updateAverageRating(updatedLocation._id); // 평점 업데이트
+        const thisReview = updatedLocation.reviews.slice(-1).pop();
+        return res.status(201).json(thisReview); // 성공적으로 생성된 리뷰 반환
+    } catch (err) {
+        return res.status(400).json(err); // 에러 반환
+    }
 };
 
 const updateAverageRating = async (locationId) => {
@@ -48,21 +73,25 @@ const updateAverageRating = async (locationId) => {
 };
 
 const reviewsCreate = async (req, res) => {
-  const locationId = req.params.locationid;
-  if (!locationId) {
-    return res.status(404).json({ "message": "Location not found" });
-  }
+    const userName = await getAuthor(req, res);
+    if (!userName) return; // `getAuthor`에서 이미 응답이 반환됨
 
-  try {
-    const location = await Loc.findById(locationId).select('reviews').exec();
-    if (location) {
-      await doAddReview(req, res, location);
-    } else {
-      return res.status(404).json({ "message": "Location not found" });
+    const locationId = req.params.locationid;
+    if (!locationId) {
+        res.status(404).json({ "message": "Location not found" });
+        return;
     }
-  } catch (err) {
-    return res.status(400).json(err);
-  }
+
+    try {
+        const location = await Loc.findById(locationId).select('reviews').exec();
+        if (!location) {
+            res.status(404).json({ "message": "Location not found" });
+            return;
+        }
+        await doAddReview(req, res, location, userName);
+    } catch (err) {
+        res.status(400).json(err);
+    }
 };
 
 const reviewsReadOne = async (req, res) => {
